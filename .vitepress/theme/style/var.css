@@ -1,0 +1,13 @@
+  .vp-doc a {
+    text-decoration: none;
+  }
+  
+  .medium-zoom-overlay {
+    z-index: 999 !important;
+    background-color: var(--vp-c-bg) !important;
+  }
+  
+  
+  .medium-zoom-image {
+    z-index: 9999 !important;
+  }

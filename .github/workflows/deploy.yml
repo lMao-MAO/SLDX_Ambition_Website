@@ -1,0 +1,76 @@
+# 构建 VitePress 站点并将其部署到 GitHub Pages 的示例工作流程
+#
+
+name: Deploy VitePress site to Pages
+
+on:
+  # 只在主仓库的 main 分支推送时部署，Fork 仓库不会触发部署
+  push:
+    branches: [main]
+  # 允许你从 Actions 选项卡手动运行此工作流程
+  workflow_dispatch:
+
+# 设置 GITHUB_TOKEN 的权限，以允许部署到 GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 只允许同时进行一次部署。当短时间内有多个提交推送时，
+# 取消正在进行的运行，只保留最新一次，避免排队等待和重复构建
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  # 只在主仓库运行时才部署
+  build:
+    # 如果不是主仓库，跳过的部署
+    if: github.repository == 'SYLU-Ambition/SLDX_Ambition_Website'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        version: 10.9.0
+    - name: Setup Node
+      uses: actions/setup-node@v5
+      with:
+        node-version: 22
+        cache: pnpm
+    - name: Setup Pages
+      uses: actions/configure-pages@v6
+    - name: Install dependencies
+      run: pnpm install
+    - name: Setup Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+    - name: Install Python deps
+      run: pip install Pillow beautifulsoup4 lxml
+    - name: Optimize wechat articles
+      run: python3 scripts/optimize_wechat.py
+    - name: Build with VitePress
+      run: pnpm run build
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v5
+      with:
+        path: .vitepress/dist
+
+  # 部署工作
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    name: Deploy
+    if: github.repository == 'SYLU-Ambition/SLDX_Ambition_Website'
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v5
